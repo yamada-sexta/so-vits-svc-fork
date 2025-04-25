@@ -668,7 +668,7 @@ def main():
     # with ProcessPool(max_workers=1) as pool:
     # to support Linux
     with ProcessPool(
-        max_workers=min(2, multiprocessing.cpu_count()),
+        max_workers=min(1, multiprocessing.cpu_count()),
         context=multiprocessing.get_context("spawn"),
     ) as pool:
         future: None | ProcessFuture = None
