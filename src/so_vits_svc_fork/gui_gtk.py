@@ -44,7 +44,7 @@ except ImportError:
 
 # --- Reusable Backend Functions (mostly copied) ---
 
-GUI_DEFAULT_PRESETS_PATH = Path(__file__).parent / "default_gui_presets.json"
+GUI_DEFAULT_PRESETS_PATH = Path(__file__).parent.parent / "default_gui_presets.json" # Correct path relative to repo root
 GUI_PRESETS_PATH = Path("./user_gui_presets.json").absolute()
 
 LOG = getLogger(__name__)
@@ -114,13 +114,14 @@ def get_output_path(input_path: Path) -> Path:
     return output_path
 
 
-def get_supported_file_types() -> list[Gio.FileFilter]:
+# Corrected type hint and usage of Gtk.FileFilter
+def get_supported_file_types() -> list[Gtk.FileFilter]:
     """Returns a list of Gtk.FileFilter objects."""
     filters = []
     sf_formats = sf.available_formats()
     # Add an "All supported audio" filter
     all_supported_glob = " ".join([f"*.{ext.lower()}" for ext in sf_formats.keys()])
-    all_filter = Gio.FileFilter.new()
+    all_filter = Gtk.FileFilter.new() # Use Gtk.FileFilter
     all_filter.set_name("All supported audio")
     all_filter.add_pattern(all_supported_glob)
     filters.append(all_filter)
@@ -128,7 +129,7 @@ def get_supported_file_types() -> list[Gio.FileFilter]:
     # Add filters for individual formats
     for name, description in sf_formats.items():
         # sf_formats description is often empty, use name as fallback
-        file_filter = Gio.FileFilter.new()
+        file_filter = Gtk.FileFilter.new() # Use Gtk.FileFilter
         filter_name = f"{name} ({description or name} files)"
         file_filter.set_name(filter_name)
         file_filter.add_pattern(f"*.{name.lower()}")
@@ -242,7 +243,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
         model_path_row.add_suffix(self.widgets["model_path"])
         model_browse_button = Gtk.Button(label="Browse")
         model_browse_button.connect("clicked", self._on_browse_clicked, "model_path", "open",
-                                    [Gio.FileFilter.new().add_pattern("G_*.pth"), Gio.FileFilter.new().add_pattern("G_*.pt")])
+                                    [Gtk.FileFilter.new().add_pattern("G_*.pth"), Gtk.FileFilter.new().add_pattern("G_*.pt")]) # Use Gtk.FileFilter
         model_path_row.add_suffix(model_browse_button)
         paths_group.add(model_path_row)
 
@@ -256,7 +257,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
         config_path_row.add_suffix(self.widgets["config_path"])
         config_browse_button = Gtk.Button(label="Browse")
         config_browse_button.connect("clicked", self._on_browse_clicked, "config_path", "open",
-                                     [Gio.FileFilter.new().add_pattern("*.json")])
+                                     [Gtk.FileFilter.new().add_pattern("*.json")]) # Use Gtk.FileFilter
         config_path_row.add_suffix(config_browse_button)
         paths_group.add(config_path_row)
 
@@ -269,7 +270,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
         cluster_path_row.add_suffix(self.widgets["cluster_model_path"])
         cluster_browse_button = Gtk.Button(label="Browse")
         cluster_browse_button.connect("clicked", self._on_browse_clicked, "cluster_model_path", "open",
-                                      [Gio.FileFilter.new().add_pattern("*.pt"), Gio.FileFilter.new().add_pattern("*.pth"), Gio.FileFilter.new().add_pattern("*.pkl")])
+                                      [Gtk.FileFilter.new().add_pattern("*.pt"), Gtk.FileFilter.new().add_pattern("*.pth"), Gtk.FileFilter.new().add_pattern("*.pkl")]) # Use Gtk.FileFilter
         cluster_path_row.add_suffix(cluster_browse_button)
         paths_group.add(cluster_path_row)
 
@@ -300,7 +301,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
         self.widgets["transpose_adj"] = Gtk.Adjustment.new(0, -36, 36, 1, 12, 0)
         self.widgets["transpose"] = Gtk.Scale.new(Gtk.Orientation.HORIZONTAL, self.widgets["transpose_adj"])
         self.widgets["transpose"].set_digits(0)
-        self.widgets["transpose"].set_marks([-36, -24, -12, 0, 12, 24, 36], Gtk.PositionType.BOTTOM)
+        # self.widgets["transpose"].set_marks([-36, -24, -12, 0, 12, 24, 36], Gtk.PositionType.BOTTOM)
         self.widgets["transpose"].set_hexpand(True)
         transpose_row = Adw.ActionRow.new()
         transpose_row.set_title("Pitch (12 = 1 octave)")
@@ -680,7 +681,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
             except Exception as e:
                 LOG.error("Error in realtime voice changer:")
                 LOG.exception(e)
-                self._show_error_dialog("Realtime Error", f"An error occurred in the realtime voice changer:\n\n{e}")
+                GLib.idle_add(self._show_error_dialog, "Realtime Error", f"An error occurred in the realtime voice changer:\n\n{e}")
             finally:
                 self.realtime_future = None
                 GLib.idle_add(self._update_realtime_buttons) # Update buttons in main thread
@@ -714,7 +715,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
         # Continue the timeout check
         return GLib.SOURCE_CONTINUE
 
-    def _on_browse_clicked(self, button: Gtk.Button, entry_key: str, dialog_type: str, filters: list[Gio.FileFilter] | None):
+    def _on_browse_clicked(self, button: Gtk.Button, entry_key: str, dialog_type: str, filters: list[Gtk.FileFilter] | None): # Corrected filter type hint
         """Handler for Browse buttons."""
         entry = self.widgets[entry_key]
 
@@ -722,7 +723,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
             dialog = Gtk.FileDialog.new()
             dialog.set_title("Select File")
             if filters:
-                 filters_list = Gio.ListStore.new(Gio.FileFilter)
+                 filters_list = Gio.ListStore.new(Gtk.FileFilter) # Use Gtk.FileFilter
                  for f in filters:
                      filters_list.append(f)
                  dialog.set_filters(filters_list)
@@ -763,7 +764,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
              dialog = Gtk.FileDialog.new()
              dialog.set_title("Save File As")
              if filters:
-                  filters_list = Gio.ListStore.new(Gio.FileFilter)
+                  filters_list = Gio.ListStore.new(Gtk.FileFilter) # Use Gtk.FileFilter
                   for f in filters:
                       filters_list.append(f)
                   dialog.set_filters(filters_list)
@@ -819,14 +820,16 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
             if file:
                 # Validate extension before setting the text
                 output_path = Path(file.get_path())
-                if not output_path.suffix:
-                    # GtkFileDialog adds default suffix, but double-check
-                     LOG.warning("Saved file path is missing extension.")
-                     self._show_error_dialog("Warning", "The selected file path is missing a file extension. Please add one manually.")
+                # Basic check, GtkFileDialog filters help, but manual edit is possible
+                supported_suffixes = [f".{ext.lower()}" for ext in sf.available_formats().keys()]
+                if not output_path.suffix or output_path.suffix.lower() not in supported_suffixes:
+                     LOG.warning(f"Saved file path '{output_path}' has an unsupported or missing extension.")
+                     # Decide how to handle this - set the path and warn, or refuse?
+                     # Setting and warning allows the user to manually fix.
+                     self._show_info_dialog("Warning", f"The selected file path '{output_path.name}' has an unsupported or missing file extension. Please ensure you use a supported extension (e.g., .wav, .mp3).")
                      entry.set_text(file.get_path()) # Set it anyway, user can edit
                 else:
-                    # Optional: Deeper validation if needed, but FileDialog filters help
-                    entry.set_text(file.get_path())
+                     entry.set_text(file.get_path())
 
         except Exception as e:
             LOG.error(f"Error saving file: {e}")
@@ -848,9 +851,27 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
             input_path = Path(input_path_str)
             # Update output path suggestion only if the output path entry is empty
             if not self.widgets["output_path"].get_text():
-                 suggested_output_path = get_output_path(input_path)
-                 self.widgets["output_path"].set_text(str(suggested_output_path))
-
+                 # Check if input path is a directory or file first before generating output path
+                 if input_path.exists() and (input_path.is_file() or input_path.is_dir()):
+                     # If it's a directory, maybe suggest outputting to a default file name in that dir?
+                     # The original code's get_output_path expects a file input.
+                     # We'll generate a default based on a dummy name for dir inputs,
+                     # or the actual file name for file inputs.
+                     if input_path.is_file():
+                         suggested_output_path = get_output_path(input_path)
+                         self.widgets["output_path"].set_text(str(suggested_output_path))
+                     elif input_path.is_dir():
+                         # For directory input, just suggest a default file in that directory
+                         default_output_file = input_path / "output.wav" # Or get_output_path(input_path / "dummy_input.wav") ?
+                         # Let's stick to the original logic where output path is a single file.
+                         # If the user browses a folder for input, the infer function must handle it.
+                         # The output path entry implies a single output file or directory base.
+                         # Let's not auto-fill the output path if input is a directory for now,
+                         # as the single output path entry doesn't make sense for batch.
+                         # If batch output is required, the UI/logic needs a separate output *directory* field.
+                         # The original PySimpleGUI `get_output_path` function implies a single file output.
+                         # Let's only auto-fill output if input is a file.
+                         pass # Do nothing if input is a directory
 
     def _on_auto_predict_f0_toggled(self, checkbox: Gtk.CheckButton, pspec):
         """Handler for the Auto Predict F0 checkbox."""
@@ -903,9 +924,9 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
              LOG.warning(f"Input path {input_path} does not exist or is not a file/folder.")
              self._show_info_dialog("Warning", f"Input path '{input_path_str}' does not exist or is not a file/folder.")
              return
-        if input_path.is_dir() and not list(input_path.iterdir()):
-             LOG.warning(f"Input folder {input_path} is empty.")
-             self._show_info_dialog("Warning", f"Input folder '{input_path_str}' is empty.")
+        if input_path.is_dir() and not any(f.is_file() for f in input_path.iterdir()): # Check for at least one file in directory
+             LOG.warning(f"Input folder {input_path} is empty or contains no files.")
+             self._show_info_dialog("Warning", f"Input folder '{input_path_str}' is empty or contains no files.")
              return
 
 
@@ -993,13 +1014,21 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
             future.result()
             LOG.info(f"Finished inference to {output_path.stem}{output_path.suffix}")
 
-            if auto_play and output_path.exists():
-                LOG.info(f"Playing output audio {output_path}")
-                # Play audio in a separate process to avoid blocking the GUI
-                if self.audio_play_future and not self.audio_play_future.done():
-                     LOG.warning("Skipping auto-play, another audio is already playing.")
-                else:
-                    self.audio_play_future = self.process_pool.schedule(play_audio_process, args=(output_path,))
+            # Check if output_path is a directory (when input was a directory)
+            # If input was a directory, output_path is likely the specified output directory base.
+            # We can't auto-play a directory. Maybe list the files produced?
+            # For now, only auto-play if the input was a file.
+            input_path_str = self.widgets["input_path"].get_text()
+            if input_path_str and Path(input_path_str).is_file():
+                 if auto_play and output_path.exists() and output_path.is_file():
+                    LOG.info(f"Playing output audio {output_path}")
+                    # Play audio in a separate process to avoid blocking the GUI
+                    if self.audio_play_future and not self.audio_play_future.done():
+                         LOG.warning("Skipping auto-play, another audio is already playing.")
+                    else:
+                        self.audio_play_future = self.process_pool.schedule(play_audio_process, args=(output_path,))
+                 elif auto_play:
+                     LOG.warning(f"Auto-play requested, but output file not found or is not a file: {output_path}")
 
         except Exception as e:
             LOG.error("Inference process failed:")
@@ -1030,11 +1059,13 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
 
         try:
              # Find the index corresponding to the selected name
-             input_devices_list, output_devices_list, input_indices, output_indices = get_devices(update=False)
+             # Re-get device lists just in case (though _update_devices_combo updates instance vars)
+             input_devices_list, output_devices_list, self._input_device_indices, self._output_device_indices = get_devices(update=False)
+
              if input_device_name in input_devices_list:
-                  input_device_index = input_indices[input_devices_list.index(input_device_name)]
+                  input_device_index = self._input_device_indices[input_devices_list.index(input_device_name)]
              if output_device_name in output_devices_list:
-                  output_device_index = output_indices[output_devices_list.index(output_device_name)]
+                  output_device_index = self._output_device_indices[output_devices_list.index(output_device_name)]
 
              if input_device_index == -1:
                   LOG.error(f"Selected input device not found: {input_device_name}")
@@ -1048,6 +1079,23 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
         except Exception as e:
              LOG.exception("Error getting device indices:")
              self._show_error_dialog("Device Error", f"Failed to determine device indices:\n{e}\n\nPlease refresh devices.")
+             return
+
+        # More validation
+        if not Path(settings["model_path"]).exists():
+             self._show_error_dialog("File Not Found", f"Model path not found:\n{settings['model_path']}")
+             return
+        if not Path(settings["config_path"]).exists():
+             self._show_error_dialog("File Not Found", f"Config path not found:\n{settings['config_path']}")
+             return
+        if settings["cluster_model_path"] and not Path(settings["cluster_model_path"]).exists():
+             self._show_error_dialog("File Not Found", f"Cluster model path not found:\n{settings['cluster_model_path']}")
+             return
+        if not settings["speaker"]:
+             self._show_error_dialog("Configuration Error", "No speaker selected.")
+             return
+        if self.widgets["speaker"].get_active_text() == "No speakers found" or self.widgets["speaker"].get_active_text() == "Error loading speakers":
+             self._show_error_dialog("Configuration Error", "Speaker list is not loaded correctly. Check config path.")
              return
 
 
@@ -1083,7 +1131,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
                     additional_infer_before_seconds=settings["additional_infer_before_seconds"],
                     additional_infer_after_seconds=settings["additional_infer_after_seconds"],
                     block_seconds=settings["block_seconds"],
-                    version=int(settings["realtime_algorithm"][0]), # Extract the number
+                    version=settings["realtime_algorithm"], # Integer value now
                     input_device=input_device_index,
                     output_device=output_device_index,
                     device=get_optimal_device() if settings["use_gpu"] else "cpu",
@@ -1142,8 +1190,12 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
 
         if config_path.exists() and config_path.is_file():
             try:
-                from . import utils # Ensure utils is accessible
+                # Ensure utils is accessible relative to this script's location or via sys.path
+                # from . import utils # Keep this if part of a package
+                # If running as standalone, ensure so_vits_svc_fork is in sys.path
+                # import so_vits_svc_fork.utils as utils # Or this if imported directly
 
+                # Use the imported utils
                 hp = utils.get_hparams(config_path_str)
                 LOG.debug(f"Loaded config from {config_path_str}")
                 speakers = list(hp.__dict__["spk"].keys())
@@ -1213,6 +1265,8 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
                  except Exception:
                       input_combo.set_active(0) # Fallback to first
             else:
+                 input_combo.append_text("No Input Devices Found")
+                 input_combo.set_active(0)
                  input_combo.set_sensitive(False)
 
 
@@ -1230,11 +1284,15 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
                  except Exception:
                        output_combo.set_active(0) # Fallback to first
             else:
+                 output_combo.append_text("No Output Devices Found")
+                 output_combo.set_active(0)
                  output_combo.set_sensitive(False)
 
 
         except Exception as e:
             LOG.exception("Error listing audio devices:")
+            input_combo.remove_all() # Clear any partial lists
+            output_combo.remove_all()
             input_combo.append_text("Error loading devices")
             output_combo.append_text("Error loading devices")
             input_combo.set_active(0)
@@ -1247,9 +1305,13 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
     def _on_presets_changed(self, combo: Gtk.ComboBoxText):
         """Handler for when the selected preset changes."""
         preset_name = combo.get_active_text()
-        if preset_name:
+        if preset_name and preset_name not in ["Error loading presets", "No presets found"]:
             LOG.info(f"Applying preset: {preset_name}")
             self._apply_preset(preset_name)
+        elif not preset_name:
+            LOG.debug("Preset selection cleared.")
+        else:
+            LOG.warning(f"Selected preset '{preset_name}' is invalid. Cannot apply.")
 
 
     def _apply_preset(self, name: str) -> None:
@@ -1270,7 +1332,11 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
                             # Sliders use Adjustments
                              adj = self.sliders.get(key)
                              if adj:
-                                 adj.set_value(float(value))
+                                 # Ensure value is within the adjustment's bounds
+                                 adj_lower = adj.get_lower()
+                                 adj_upper = adj.get_upper()
+                                 clamped_value = max(adj_lower, min(adj_upper, float(value)))
+                                 adj.set_value(clamped_value)
                              else:
                                  LOG.warning(f"No adjustment found for slider key: {key}")
                         elif isinstance(widget, Gtk.ComboBoxText):
@@ -1291,6 +1357,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
                     except Exception as e:
                         LOG.error(f"Error applying preset value for key {key}: {value} - {e}")
                         # Optionally show an error, but might be too disruptive during preset apply
+            # Update related widgets after applying settings
             self._update_speaker_combo() # Update speaker list based on potential new config path
             self._update_devices_combo() # Update device list
             self._on_auto_predict_f0_toggled(self.widgets["auto_predict_f0"], None) # Update transpose sensitivity
@@ -1329,8 +1396,8 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
     def _on_delete_preset_clicked(self, button: Gtk.Button):
         """Handler for the Delete Preset button."""
         preset_name = self.widgets["presets"].get_active_text()
-        if not preset_name:
-            LOG.warning("No preset selected to delete.")
+        if not preset_name or preset_name in ["Error loading presets", "No presets found"]:
+            LOG.warning("No valid preset selected to delete.")
             self._show_info_dialog("Warning", "Please select a preset to delete.")
             return
 
@@ -1362,8 +1429,10 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
                 # Select the first preset if list is not empty, otherwise clear
                 if preset_names_list:
                      self.widgets["presets"].set_active(0)
+                     self._apply_preset(self.widgets["presets"].get_active_text()) # Apply the new first preset
                 else:
                      self.widgets["presets"].set_active(-1) # No selection
+                     # Optionally clear fields or apply defaults if no presets remain
 
                 self._show_info_dialog("Success", f"Preset '{preset_name}' deleted.")
 
@@ -1376,8 +1445,7 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
         """Collects current settings from the UI widgets."""
         settings = {}
         for key, widget in self.widgets.items():
-            if key == "silence_threshold_adj" or key == "transpose_adj" or key.endswith("_adj"):
-                 # Skip adjustments, get value from the scale widget
+            if key.endswith("_adj"): # Skip adjustments, get value from the scale widget
                  continue
             elif isinstance(widget, Gtk.Entry):
                 settings[key] = widget.get_text()
@@ -1387,12 +1455,13 @@ class VoiceConverterWindow(Adw.ApplicationWindow):
                  settings[key] = widget.get_value()
             elif isinstance(widget, Gtk.ComboBoxText):
                 # Store the text value
-                settings[key] = widget.get_active_text()
-                # For realtime algorithm, store the number
+                text_value = widget.get_active_text()
+                settings[key] = text_value if text_value is not None else "" # Handle None if no selection
+
+                # For realtime algorithm, store the integer number
                 if key == "realtime_algorithm":
-                    text = settings[key]
-                    if text and text[0].isdigit():
-                        settings[key] = int(text[0])
+                    if text_value and text_value[0].isdigit():
+                        settings[key] = int(text_value[0])
                     else:
                          settings[key] = 1 # Default if parsing fails
             # Add other widget types if necessary
@@ -1469,7 +1538,6 @@ class VoiceConverterApplication(Adw.Application):
 def main():
     # Basic logging setup (adjust as needed)
     import logging
-    multiprocessing.freeze_support()
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(name)s - %(message)s')
     logging.getLogger("pebble").setLevel(logging.WARNING) # Reduce pebble logging verbosity
 
@@ -1480,4 +1548,5 @@ def main():
 
 if __name__ == "__main__":
     # Ensure multiprocessing starts correctly, especially on Windows
+    multiprocessing.freeze_support()
     main()
